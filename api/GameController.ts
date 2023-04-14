@@ -26,12 +26,12 @@ export default class GameController {
     }
 
     //TODO: Promise Obj 
-    async getGameState2(gameId: string): Promise<Response<GameStateData>> {
+    async getGameState(gameId: string): Promise<Response<GameStateData>> {
         const response = await fetch(`${this.apiBaseUrl}/games/${gameId}`, { method: "get" });
         return response.json();
     }
 
-    async getGameState(gameId: string): Promise<Response<GameStateData>> {
-        return fetch(`${this.apiBaseUrl}/games/${gameId}`, { method: "get" }).then((response) => response.json());
-    }
+    // async getGameState(gameId: string): Promise<Response<GameStateData>> {
+    //     return fetch(`${this.apiBaseUrl}/games/${gameId}`, { method: "get" }).then((response) => response.json());
+    // }
 }
