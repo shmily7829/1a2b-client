@@ -1,18 +1,25 @@
+import SetPlayerNumberRequest from "@/api/data/request/SetPlayerNumberRequest";
 import GameStateData from "@/api/data/response/GameStateData";
+import GameStateEnum from "@/api/entities/GameStateEnum";
 import ApiContext from "@/components/ApiContext";
 import { useRouter } from "next/router";
-import { useContext, useState, useEffect } from "react";
+import {
+  useContext,
+  useState,
+  useEffect,
+  SetStateAction,
+  ChangeEventHandler,
+} from "react";
 
 export default function HomePage() {
-  //useState -> 狀態更新
-  //setcode -> code 資料更新 -> useState -> 更新的資料給 homepage -> 重新render
-  const [playerId, setPlayerId] = useState("");
-  const [answer1, setAnswer1] = useState("");
-  const [answer2, setAnswer2] = useState("");
-  const [guess, setGuess] = useState("");
-  const [number, setNumber] = useState("");
-  const [gameState, setGameState] = useState<GameStateData | null>(null);
+  /*Context*/
   const { gameController } = useContext(ApiContext);
+
+  /*State*/
+  const [playerId, setPlayerId] = useState("");
+  const [number, setNumber] = useState("");
+  const [guess, setGuess] = useState("");
+  const [gameState, setGameState] = useState<GameStateData | null>(null);
   const router = useRouter();
 
   const handleClick = async () => {
@@ -28,22 +35,87 @@ export default function HomePage() {
     );
   };
 
+  //P2的畫面
   useEffect(() => {
+    var playerId = router.query.playerId;
+    var gameId = router.query.gameId;
+
     const fetchData = async () => {
-      if (typeof router.query.gameId == "string") {
-        const gameStateResponse = await gameController.getGameState(
-          router.query.gameId
-        );
+      //拿到遊戲狀態
+      if (typeof gameId == "string") {
+        const gameStateResponse = await gameController.getGameState(gameId);
         setGameState(gameStateResponse.data);
       }
 
-      if (typeof router.query.playerId == "string") {
-        setPlayerId(router.query.playerId);
+      //取得P2的Id
+      if (typeof playerId == "string") {
+        setPlayerId(playerId);
       }
     };
     fetchData();
-  }, [router.query.gameId]);
+  }, [router.query]);
 
+  useEffect(() => {
+    if (gameState == null || gameState.gameState == GameStateEnum.GAME_OVER) {
+      return;
+    }
+
+    if (
+      gameState.gameState == GameStateEnum.GUESSING &&
+      gameState.turnPlayerId == playerId
+    ) {
+      return;
+    }
+
+    const fetchData = async () => {
+      console.log(gameState);
+      const gameStateResponse = await gameController.getGameState(
+        gameState.gameId
+      );
+
+      setGameState(gameStateResponse.data);
+    };
+
+    setTimeout(() => {
+      fetchData();
+    }, 5000);
+  }, [gameState]);
+
+  function handleInputChange(event: React.ChangeEvent<HTMLInputElement>) {
+    setNumber(event.target.value);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    console.log("遊戲狀態:", gameState);
+    if (gameState == null) {
+      return;
+    }
+
+    if (gameState.gameState == GameStateEnum.SETTING_ANSWER) {
+      const playerAnsResponse = await gameController.setPlayerNumber(
+        { number },
+        gameState.gameId,
+        playerId
+      );
+      console.log(`${playerId}:`, playerAnsResponse);
+    }
+
+    if (gameState.gameState == GameStateEnum.GUESSING) {
+      const playerAnsResponse = await gameController.guessPlayerNumber(
+        { guesserId: playerId, number },
+        gameState.gameId
+      );
+
+      const gameStateResponse = await gameController.getGameState(
+        gameState.gameId
+      );
+
+      setGameState(gameStateResponse.data);
+
+      console.log(`${playerId}:${playerAnsResponse.message}`);
+    }
+  }
   if (gameState == null) {
     return (
       <div>
@@ -53,20 +125,48 @@ export default function HomePage() {
     );
   }
 
+  //P1的畫面
   return (
     <div>
       <h1>1A2B練功場</h1>
-      <pre>顯示遊戲狀態 {JSON.stringify(gameState, null, 2)}</pre>
-      <p>{playerId}</p>
+      {/* <pre>顯示遊戲狀態 {JSON.stringify(gameState, null, 2)}</pre> */}
+      <p>玩家id: {playerId}</p>
+      <p>設置的答案: {number}</p>
+      <p>遊戲狀態:{gameState.gameState}</p>
+      <p>當前玩家id: {gameState.turnPlayerId}</p>
+      <p>贏家：{gameState.winnerId}</p>
       <br />
-      <input
-        required
-        maxLength={4}
-        placeholder="請輸入數字"
-        type="text"
-        value={number}
-        onChange={(e) => setNumber(e.target.value)}
-      />
+      <form onSubmit={handleSubmit}>
+        <label>
+          Answer:
+          <input
+            type="text"
+            required
+            maxLength={4}
+            placeholder="請設置一組不重複的答案"
+            value={number}
+            onChange={handleInputChange}
+          />
+        </label>
+        <button type="submit">Submit</button>
+      </form>
+      猜測記錄：
+      <textarea disabled value={toGameHistory(gameState).join("\n")}></textarea>
     </div>
   );
+}
+
+function toGameHistory(gameState: GameStateData): string[] {
+  const gameHistory: string[] = [];
+  for (let index = 0; index < gameState.guessHistory.length; index++) {
+    const guessNumber = gameState.guessHistory[index];
+    const guessResult = gameState.resultHistory[index];
+
+    if (index % 2 == 0) {
+      gameHistory.push(`player1 ${guessNumber} ${guessResult}`);
+    } else {
+      gameHistory.push(`player2 ${guessNumber} ${guessResult}`);
+    }
+  }
+  return gameHistory;
 }

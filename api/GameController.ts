@@ -5,7 +5,7 @@ import type GuessPlayerNumberData from "./data/response/GuessPlayerNumberData";
 import type Game from "./entities/Game";
 import type Response from "./data/response/Response";
 
-export default class GameController {
+export default class GameApiClient {
     constructor(private apiBaseUrl: string) {
 
     }
@@ -16,18 +16,26 @@ export default class GameController {
     }
 
     async setPlayerNumber(request: SetPlayerNumberRequest, gameId: string, playerId: string): Promise<Response<Game>> {
-        const response = await fetch(`${this.apiBaseUrl}/games/${gameId}/players/${playerId}/answer`, { method: "put", body: JSON.stringify(request) });
+        const response = await fetch(`${this.apiBaseUrl}/games/${gameId}/players/${playerId}/answer`, {
+            method: "put",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(request)
+        });
         return response.json();
     }
 
     async guessPlayerNumber(request: GuessPlayerNumberRequest, gameId: string): Promise<Response<GuessPlayerNumberData>> {
-        const response = await fetch(`${this.apiBaseUrl}/games/${gameId}/guess`, { method: "post", body: JSON.stringify(request) });
+        const response = await fetch(`${this.apiBaseUrl}/games/${gameId}/guess`, {
+            method: "post",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(request)
+        });
         return response.json();
     }
 
     //TODO: Promise Obj 
     async getGameState(gameId: string): Promise<Response<GameStateData>> {
-        const response = await fetch(`${this.apiBaseUrl}/games/${gameId}`, { method: "get" });
+        const response = await fetch(`${this.apiBaseUrl}/games/${gameId}`);
         return response.json();
     }
 

@@ -4,7 +4,9 @@ export default interface GameStateData {
     gameId: string;
     player1Id: string;
     player2Id: string;
-    gameStateEnum: GameStateEnum;
+    gameState: GameStateEnum;
     turnPlayerId: string;
     guessHistory: string[];
+    resultHistory: string[];
+    winnerId: string;
 }
